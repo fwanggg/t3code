@@ -2,6 +2,14 @@
    shako-ui/design-system/src/styles/tokens.css: warm graphite, the amber accent, square corners,
    Instrument Sans and JetBrains Mono. Only variables change here, so an upstream update stays easy. */
 
+/* Square corners. T3's larger corners add 4-12 px to --radius, so --radius alone does not make them square. A circle
+   (rounded-full: dots, avatars, spinners) stays a circle. */
+html:root *:not([class*="rounded-full"]),
+html:root *::before,
+html:root *::after {
+  border-radius: 0 !important;
+}
+
 html:root {
   --radius: 0px;
   --control-radius: 0px;
