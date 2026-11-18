@@ -37,6 +37,14 @@ export function AboutVersionTitle() {
           <TooltipPopup>Copy version</TooltipPopup>
         </Tooltip>
       </code>
+      <a
+        className="text-2xs text-muted-foreground underline-offset-2 hover:underline"
+        href="https://github.com/pingdotgg/t3code"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Built on T3 Code (MIT)
+      </a>
     </span>
   );
 }

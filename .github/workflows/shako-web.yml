@@ -1,0 +1,57 @@
+# Shako's build of the web UI, for https://workspace.shako.dev/build/app/ (github.com/fwanggg/shako,
+# shako/docs/build.md). A manual run builds the head of a branch and publishes the release
+# shako-web-<upstream version>-<commit> with the bundle and its SHA-256. shako-ui/web pins one release.
+#   gh workflow run shako-web.yml -R fwanggg/t3code -f ref=shako
+name: shako-web
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "The branch or commit to build"
+        required: true
+        default: shako
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: |
+            args:
+              - --frozen-lockfile
+              - --filter=@t3tools/web...
+
+      - name: Build
+        working-directory: apps/web
+        env:
+          VITE_HOSTED_APP_CHANNEL: latest
+          VITE_HOSTED_APP_URL: https://workspace.shako.dev/build/app/
+        run: vp build --base /build/app/
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          version="$(node -p 'require("./apps/server/package.json").version')"
+          commit="$(git rev-parse --short=7 HEAD)"
+          tag="shako-web-$version-$commit"
+          tar -C apps/web/dist -czf "$tag.tar.gz" .
+          sha256sum "$tag.tar.gz" > "$tag.tar.gz.sha256"
+          if gh release view "$tag" >/dev/null 2>&1; then echo "$tag exists"; exit 0; fi
+          gh release create "$tag" "$tag.tar.gz" "$tag.tar.gz.sha256" --target "$(git rev-parse HEAD)" \
+            --title "$tag" --notes "The web UI of T3 Code $version for workspace.shako.dev/build (commit $commit)."

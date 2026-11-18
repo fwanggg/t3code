@@ -1,0 +1,61 @@
+/* Shako's look for T3 Code (the fork for workspace.shako.dev/build). The values are the tokens of
+   shako-ui/design-system/src/styles/tokens.css: warm graphite, the amber accent, square corners,
+   Instrument Sans and JetBrains Mono. Only variables change here, so an upstream update stays easy. */
+
+html:root {
+  --radius: 0px;
+  --control-radius: 0px;
+  --font-sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --background: #fbfaf6;
+  --foreground: #1b1b17;
+  --card: #ffffff;
+  --card-foreground: #1b1b17;
+  --popover: #ffffff;
+  --popover-foreground: #1b1b17;
+  --primary: #e8962a;
+  --primary-foreground: #1a1305;
+  --secondary: #efede5;
+  --secondary-foreground: #1b1b17;
+  --muted: #efede5;
+  --muted-foreground: #6e6c63;
+  --accent: #e6e3d9;
+  --accent-foreground: #1b1b17;
+  --message-surface: #e6e3d9;
+  --border: #dedace;
+  --input: #cbc6b6;
+  --ring: #e8962a;
+  --sidebar: #f4f2eb;
+  --sidebar-control-surface: #efede5;
+  --sidebar-row-hover: #efede5;
+  --sidebar-row-active: #fbfaf6;
+  --sidebar-row-selected: #fbfaf6;
+}
+
+html:root.dark {
+  --background: #0d0e0b;
+  --foreground: #eceae2;
+  --surface-raised: #1b1c17;
+  --card: #141511;
+  --card-foreground: #eceae2;
+  --popover: #23241e;
+  --popover-foreground: #eceae2;
+  --primary: #f2a93b;
+  --primary-foreground: #1a1305;
+  --secondary: #1b1c17;
+  --secondary-foreground: #eceae2;
+  --muted: #1b1c17;
+  --muted-foreground: #a9a79b;
+  --accent: #23241e;
+  --accent-foreground: #eceae2;
+  --message-surface: #23241e;
+  --border: #2b2c25;
+  --input: #3a3b33;
+  --ring: #f2a93b;
+  --sidebar: #141511;
+  --sidebar-control-surface: #1b1c17;
+  --sidebar-row-hover: #1b1c17;
+  --sidebar-row-active: #23241e;
+  --sidebar-row-selected: #23241e;
+}

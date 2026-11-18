@@ -6,6 +6,8 @@ export function getRouter(history: RouterHistory) {
   return createRouter({
     routeTree,
     history,
+    // Shako serves this app below a path (vite --base), not at the root of its origin.
+    basepath: import.meta.env.BASE_URL.replace(/\/$/, "") || "/",
     context: {},
     defaultPreload: "intent",
   });
