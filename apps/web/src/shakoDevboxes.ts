@@ -72,6 +72,42 @@ export function shakoDevboxName(
   return match ? match[1] : label;
 }
 
+// The row of each devbox (ShakoDevboxToolbar): its search text and its project filter, by environment id.
+export interface ShakoDevboxView {
+  readonly query: string;
+  readonly projectId: string | null;
+}
+
+const NO_VIEW: ShakoDevboxView = { query: "", projectId: null };
+let views: Readonly<Record<string, ShakoDevboxView>> = {};
+
+export function setShakoDevboxView(environmentId: string, change: Partial<ShakoDevboxView>) {
+  views = { ...views, [environmentId]: { ...(views[environmentId] ?? NO_VIEW), ...change } };
+  emit();
+}
+
+export function useShakoDevboxViews() {
+  return useSyncExternalStore(subscribe, () => views);
+}
+
+export function shakoDevboxView(
+  all: Readonly<Record<string, ShakoDevboxView>>,
+  environmentId: string,
+) {
+  return all[environmentId] ?? NO_VIEW;
+}
+
+// The devbox whose Add project button opened the command palette: the palette adds the project there.
+let addProjectEnvironmentId: string | null = null;
+
+export function readShakoAddProjectEnvironment(): string | null {
+  return addProjectEnvironmentId;
+}
+
+export function setShakoAddProjectEnvironment(environmentId: string) {
+  addProjectEnvironmentId = environmentId;
+}
+
 export function askShakoToConnect() {
   window.parent.postMessage({ type: "shako:open-connect" }, window.location.origin);
 }
