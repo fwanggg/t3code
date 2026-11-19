@@ -1,6 +1,6 @@
 import { HOOD_PATH, LOGO_BACKGROUND, LOGO_HOOD, LOGO_SIZE } from "./shakoLogoPaths";
 
-/** The VM picker of workspace.shako.dev: this app lives at <picker>/app/. */
+/** The Build view of workspace.shako.dev: this app lives at <build>/app/. */
 const SHAKO_PICKER_PATH = import.meta.env.BASE_URL.replace(/\/app\/?$/, "") || "/";
 
 /** The Shako logo and name, in place of T3's wordmark. A click goes back to the VM picker. */
@@ -8,6 +8,8 @@ export function ShakoBrandMark() {
   return (
     <a
       href={SHAKO_PICKER_PATH}
+      // In the workspace's Build view this app is in a frame: the link opens the workspace, not a page in the frame.
+      target="_top"
       className="inline-flex min-w-0 items-center gap-1.5 text-sm font-medium tracking-tight text-foreground"
       aria-label="Shako: your VMs"
     >
