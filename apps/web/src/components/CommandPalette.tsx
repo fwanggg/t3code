@@ -1,5 +1,4 @@
 import { ThreadContextDragGhost } from "./chat/ThreadContextDragGhost";
-import { readShakoAddProjectEnvironment } from "../shakoDevboxes";
 import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
 
@@ -634,11 +633,7 @@ function OpenCommandPaletteDialog(props: {
         ? desktopLocalBackendId(environment.entry.target)?.startsWith("wsl:") === true
         : false;
     }) ?? null;
-  // In the Shako workspace, a devbox's Add project button chooses the devbox (shakoDevboxes.ts).
-  const browseEnvironmentId =
-    addProjectEnvironmentId ??
-    (readShakoAddProjectEnvironment() as EnvironmentId | null) ??
-    defaultAddProjectEnvironmentId;
+  const browseEnvironmentId = addProjectEnvironmentId ?? defaultAddProjectEnvironmentId;
   const canCreateProject = useEnvironmentScope(browseEnvironmentId, AuthOrchestrationOperateScope);
   const browseEnvironment =
     environments.find((environment) => environment.environmentId === browseEnvironmentId) ?? null;

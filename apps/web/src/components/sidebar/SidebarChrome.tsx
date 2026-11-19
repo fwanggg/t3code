@@ -1,4 +1,5 @@
 import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import { inShakoFrame } from "../../shakoDevbox";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -163,6 +164,8 @@ function HistoryNavigationButton({
 }
 
 function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
+  // In the Shako workspace the bar of icons has the logo: the sidebar starts with the devbox (ShakoDevboxPanel).
+  if (inShakoFrame) return null;
   return (
     <Link
       aria-label="T3 Code home"

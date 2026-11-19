@@ -3,13 +3,13 @@ import { useEffect, useEffectEvent } from "react";
 
 import { environmentCatalog } from "./connection/catalog";
 import { connectPairing } from "./connection/onboarding";
-import { setShakoDevboxNames } from "./shakoDevboxes";
+import { setShakoDevbox, type ShakoDevbox } from "./shakoDevbox";
 import { useEnvironments } from "./state/environments";
 import { useAtomCommand } from "./state/use-atom-command";
 
 // The bridge to the Shako workspace (github.com/fwanggg/shako, shako/docs/build.md), which shows this app in a frame
-// of the same origin. It asks to pair a VM (shako:pair), to forget one (shako:unpair), and gives VM names (shako:names).
-// This app answers each request, and reports its saved VMs with their connection phase (shako:environments).
+// of the same origin. It asks to pair a VM (shako:pair), to forget one (shako:unpair), and sends the connected devbox
+// (shako:devbox). This app answers each request and reports its saved VMs (shako:environments).
 
 interface PairMessage {
   readonly type: "shako:pair";
@@ -28,17 +28,11 @@ function isUnpairMessage(data: unknown): data is UnpairMessage {
   return message.type === "shako:unpair" && typeof message.host === "string";
 }
 
-interface NamesMessage {
-  readonly type: "shako:names";
-  readonly names: Record<string, string>;
-}
-
-function isNamesMessage(data: unknown): data is NamesMessage {
-  if (typeof data !== "object" || data === null) return false;
+function readDevboxMessage(data: unknown): ShakoDevbox | null | undefined {
+  if (typeof data !== "object" || data === null) return undefined;
   const message = data as Record<string, unknown>;
-  return (
-    message.type === "shako:names" && typeof message.names === "object" && message.names !== null
-  );
+  if (message.type !== "shako:devbox") return undefined;
+  return (message.devbox as ShakoDevbox | null) ?? null;
 }
 
 function isPairMessage(data: unknown): data is PairMessage {
@@ -70,8 +64,9 @@ export function ShakoBridge() {
 
   const onMessage = useEffectEvent(async (event: MessageEvent) => {
     if (event.origin !== window.location.origin) return;
-    if (isNamesMessage(event.data)) {
-      setShakoDevboxNames(event.data.names);
+    const devbox = readDevboxMessage(event.data);
+    if (devbox !== undefined) {
+      setShakoDevbox(devbox);
       return;
     }
     if (isUnpairMessage(event.data)) {
