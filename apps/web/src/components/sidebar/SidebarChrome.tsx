@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
 import { inShakoFrame } from "../../shakoDevbox";
+import { ShakoDevboxPanel } from "./ShakoDevboxPanel";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -72,24 +73,34 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
           aria-label="Toggle main sidebar"
         />
       </div>
-      <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
-        <div className="flex shrink-0 items-center gap-1">
-          <SidebarBrand onBackdrop={backdropVariant !== null} />
-          {isElectron ? (
-            <div className="hidden items-center md:flex">
-              <HistoryNavigationButton direction="back" onBackdrop={backdropVariant !== null} />
-              <HistoryNavigationButton direction="forward" onBackdrop={backdropVariant !== null} />
+      {inShakoFrame ? (
+        // The Shako workspace's Build view: the connected devbox in place of the brand.
+        <div className="relative z-10 ml-[var(--workspace-titlebar-content-left)] flex h-full min-w-0 flex-1 items-center">
+          <ShakoDevboxPanel />
+        </div>
+      ) : (
+        <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
+          <div className="flex shrink-0 items-center gap-1">
+            <SidebarBrand onBackdrop={backdropVariant !== null} />
+            {isElectron ? (
+              <div className="hidden items-center md:flex">
+                <HistoryNavigationButton direction="back" onBackdrop={backdropVariant !== null} />
+                <HistoryNavigationButton
+                  direction="forward"
+                  onBackdrop={backdropVariant !== null}
+                />
+              </div>
+            ) : null}
+          </div>
+          {pillLabel ? (
+            <div className="ml-1 flex h-7 items-center">
+              <Badge data-environment-identification="pill" size="sm" variant="secondary">
+                {pillLabel}
+              </Badge>
             </div>
           ) : null}
         </div>
-        {pillLabel ? (
-          <div className="ml-1 flex h-7 items-center">
-            <Badge data-environment-identification="pill" size="sm" variant="secondary">
-              {pillLabel}
-            </Badge>
-          </div>
-        ) : null}
-      </div>
+      )}
     </div>
   );
 });
