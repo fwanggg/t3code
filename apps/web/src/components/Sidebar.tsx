@@ -252,6 +252,12 @@ import {
   useComboboxFilter,
 } from "./ui/combobox";
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
+import { inShakoFrame } from "../shakoDevboxes";
+import {
+  ShakoConnectVmButton,
+  ShakoDevboxHeader,
+  useShakoDevboxGroups,
+} from "./sidebar/ShakoSidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { TooltipProvider } from "./ui/tooltip";
@@ -1934,6 +1940,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         event.activatorEvent instanceof PointerEvent ? event.activatorEvent.clientY : null,
     });
   };
+  const shakoDevboxGroups = useShakoDevboxGroups(activeThreads);
   const hasProjectFolders = projectFolders !== null && projectFolders.length > 0;
   const sidebarListItemsFresh = ((): readonly SidebarListItem[] => {
     const rowsOf = (
@@ -2969,6 +2976,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         className="min-h-full"
         fixedHeader={
           <SidebarGroup className="z-[1]">
+            {inShakoFrame ? <ShakoConnectVmButton /> : null}
             <SidebarThreadHeader
               hasProjects={projectGroups.length > 0}
               projectScope={
@@ -3489,9 +3497,36 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                       ];
                       for (const item of sidebarListItems) {
                         if (item.kind === "thread") {
-                          // Folders draw active rows in their own place below.
-                          if (projectFolders !== null && item.section === "active") continue;
+                          // Folders, and the devbox groups of the Shako workspace, draw active rows in their own
+                          // place below.
+                          if (
+                            (projectFolders !== null || inShakoFrame) &&
+                            item.section === "active"
+                          )
+                            continue;
                           items.push(renderThreadRow(threadByKey.get(item.key)!, item.section));
+                          continue;
+                        }
+                        if (
+                          inShakoFrame &&
+                          projectFolders === null &&
+                          item.marker === "active-placeholder"
+                        ) {
+                          for (const group of shakoDevboxGroups) {
+                            items.push(
+                              <ShakoDevboxHeader
+                                key={`devbox:${group.environmentId}`}
+                                group={group}
+                              />,
+                            );
+                            const shown = group.folded
+                              ? group.threads.filter(
+                                  (thread) => threadShellKey(thread) === routeRowThreadKey,
+                                )
+                              : group.threads;
+                            for (const thread of shown)
+                              items.push(renderThreadRow(thread, "active"));
+                          }
                           continue;
                         }
                         if (projectFolders !== null && item.marker === "active-placeholder") {
