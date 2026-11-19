@@ -3,19 +3,21 @@ import { askShakoToDisconnect, type ShakoUse, useShakoDevbox } from "../../shako
 const GIB = 1024 ** 3;
 
 function Use({ label, use }: { readonly label: string; readonly use: ShakoUse | null }) {
-  const title = use
-    ? `${label}: ${(use.used / GIB).toFixed(1)} GB of ${(use.total / GIB).toFixed(1)} GB used`
-    : `${label}: not known`;
+  const amount = use
+    ? `${(use.used / GIB).toFixed(1)}/${(use.total / GIB).toFixed(0)} GB`
+    : "not known";
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5" role="img" aria-label={title}>
-      <span className="text-muted-foreground">{label}</span>
-      <span className="h-1 min-w-0 flex-1 bg-muted">
+    <div className="flex items-center gap-2" role="img" aria-label={`${label}: ${amount}`}>
+      <span className="w-7 shrink-0 text-muted-foreground">{label}</span>
+      <span className="block h-1.5 min-w-0 flex-1 bg-border">
         <span
           className={use && use.pct >= 90 ? "block h-full bg-warning" : "block h-full bg-primary"}
           style={{ width: `${Math.min(use?.pct ?? 0, 100)}%` }}
         />
       </span>
-      <span className="w-8 text-right tabular-nums">{use ? `${use.pct}%` : "–"}</span>
+      <span className="w-24 shrink-0 text-right tabular-nums text-muted-foreground">
+        {use ? `${use.pct}% · ${amount}` : amount}
+      </span>
     </div>
   );
 }
@@ -48,10 +50,8 @@ export function ShakoDevboxPanel() {
           Disconnect
         </button>
       </div>
-      <div className="flex items-center gap-3">
-        <Use label="RAM" use={devbox.ram} />
-        <Use label="Disk" use={devbox.disk} />
-      </div>
+      <Use label="RAM" use={devbox.ram} />
+      <Use label="Disk" use={devbox.disk} />
     </div>
   );
 }
