@@ -1,10 +1,16 @@
+import { useAtomValue } from "@effect/atom-react";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import { useEffect, useEffectEvent } from "react";
+import type { EnvironmentId } from "@t3tools/contracts";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { environmentCatalog } from "./connection/catalog";
 import { connectPairing } from "./connection/onboarding";
 import { setShakoDevbox, type ShakoDevbox } from "./shakoDevbox";
+import type { AppRouter } from "./router";
 import { useEnvironments } from "./state/environments";
+import { environmentProjects } from "./state/projects";
+import { environmentShell } from "./state/shell";
+import { environmentThreadShells } from "./state/threads";
 import { useAtomCommand } from "./state/use-atom-command";
 
 // The bridge to the Shako workspace (github.com/fwanggg/shako, shako/docs/build.md), which shows this app in a frame
@@ -52,8 +58,82 @@ function postToWorkspace(message: object) {
   window.parent.postMessage(message, window.location.origin);
 }
 
-export function ShakoBridge() {
+// The devboxes that this browser showed T3's welcome page for. The hosted build has no primary computer, so T3
+// never opens the welcome page by itself (resolveHostedFirstRunDecision). The bridge opens it for a new devbox.
+const WELCOMED_KEY = "shako:welcomed";
+// How long the bridge waits for the threads and projects of a devbox that it just paired.
+const FIRST_VISIT_WAIT_MS = 10_000;
+
+function readWelcomed(): readonly string[] {
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(WELCOMED_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberWelcomed(environmentId: string) {
+  try {
+    window.localStorage.setItem(
+      WELCOMED_KEY,
+      JSON.stringify([...new Set([...readWelcomed(), environmentId])]),
+    );
+  } catch (error) {
+    console.error("shako: cannot keep the welcomed devboxes in this browser:", error);
+  }
+}
+
+/**
+ * After a pairing: T3's welcome page for a devbox with no project and no thread that this browser did not welcome yet
+ * (the agents, their sign-in), else T3's main page. A thread of the devbox before never stays on the screen.
+ */
+function ShakoFirstVisit({
+  environmentId,
+  router,
+  onDone,
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly router: AppRouter;
+  readonly onDone: () => void;
+}) {
+  const live = useAtomValue(environmentShell.stateValueAtom(environmentId)).status === "live";
+  const projects = useAtomValue(environmentProjects.projectsAtom);
+  const threads = useAtomValue(environmentThreadShells.threadShellsAtom);
+  const fresh =
+    !projects.some((project) => project.environmentId === environmentId) &&
+    !threads.some((thread) => thread.environmentId === environmentId);
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens the first page of a devbox once its threads and projects arrive
+  useEffect(() => {
+    if (!live) return;
+    if (fresh && !readWelcomed().includes(environmentId)) {
+      rememberWelcomed(environmentId);
+      void router.navigate({ to: "/welcome", hash: `agents:${environmentId}`, replace: true });
+    } else {
+      void router.navigate({ to: "/", replace: true });
+    }
+    onDone();
+  }, [live, fresh, environmentId, router, onDone]);
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a devbox that does not answer gets T3's main page
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      console.warn(`shako: ${environmentId} sent no threads in time; opening the main page`);
+      void router.navigate({ to: "/", replace: true });
+      onDone();
+    }, FIRST_VISIT_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [environmentId, router, onDone]);
+
+  return pairedNow === null ? null : (
+    <ShakoFirstVisit environmentId={pairedNow} router={router} onDone={() => setPairedNow(null)} />
+  );
+}
+
+export function ShakoBridge({ router }: { readonly router: AppRouter }) {
   const { isReady, environments } = useEnvironments();
+  const [pairedNow, setPairedNow] = useState<EnvironmentId | null>(null);
   const pair = useAtomCommand(connectPairing, { reportFailure: false });
   const remove = useAtomCommand(environmentCatalog.remove, { reportFailure: false });
   const inFrame = window.parent !== window;
@@ -87,6 +167,7 @@ export function ShakoBridge() {
     }
     if (!isPairMessage(event.data)) return;
     const result = await pair({ host: event.data.host, pairingCode: event.data.credential });
+    if (result._tag === "Success") setPairedNow(result.value);
     postToWorkspace({
       type: "shako:paired",
       host: event.data.host,
@@ -108,5 +189,7 @@ export function ShakoBridge() {
       postToWorkspace({ type: "shako:environments", environments: JSON.parse(reportKey) });
   }, [inFrame, isReady, reportKey]);
 
-  return null;
+  return pairedNow === null ? null : (
+    <ShakoFirstVisit environmentId={pairedNow} router={router} onDone={() => setPairedNow(null)} />
+  );
 }
