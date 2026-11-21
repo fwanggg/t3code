@@ -206,6 +206,7 @@ import {
 } from "./ComposerCommandMenu";
 import {
   ComposerAttachButton,
+  ComposerAttachInput,
   ComposerAttachmentFileList,
   ComposerAttachmentMediaRow,
   ComposerFilePreviewDialog,
@@ -1026,6 +1027,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     pendingUserInputs.length === 0;
 
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
+  const composerAttachInputRef = useRef<HTMLInputElement>(null);
   const pasteAsTextShortcutUntilRef = useRef(0);
   const composerFormRef = useRef<HTMLFormElement>(null);
   const composerSurfaceRef = useRef<HTMLDivElement>(null);
@@ -3337,10 +3339,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       />
     ) : null;
   const composerAttachButton = showComposerAttachAction ? (
-    <ComposerAttachButton
-      addComposerAttachments={addComposerAttachments}
-      focusComposer={focusComposer}
-    />
+    <ComposerAttachButton inputRef={composerAttachInputRef} />
   ) : null;
   return (
     <form
@@ -3395,6 +3394,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       data-chat-composer-form="true"
       {...threadContextDropTargetProps()}
     >
+      {showComposerAttachAction ? (
+        // Not in the footer: iOS's photo picker takes focus, the mobile composer folds its
+        // footer away, and a picker unmounted meanwhile drops the chosen photo.
+        <ComposerAttachInput
+          inputRef={composerAttachInputRef}
+          addComposerAttachments={addComposerAttachments}
+          focusComposer={focusComposer}
+        />
+      ) : null}
       <ComposerBanner.Dock>
         <ComposerBanner.Column>
           <ComposerBannerStack items={shelfItems} />

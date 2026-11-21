@@ -7,7 +7,7 @@ import type {
 } from "@t3tools/contracts";
 import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
 import { CircleAlertIcon, ImageIcon, PaperclipIcon, PlayIcon, XIcon } from "lucide-react";
-import { type ComponentProps, useLayoutEffect, useRef } from "react";
+import { type ComponentProps, type RefObject, useLayoutEffect, useRef } from "react";
 
 import {
   type ComposerFileAttachment,
@@ -699,50 +699,58 @@ export function ComposerQueuedAttachmentRow({
   );
 }
 
-export function ComposerAttachButton({
+export function ComposerAttachInput({
+  inputRef,
   addComposerAttachments,
   focusComposer,
 }: {
+  readonly inputRef: RefObject<HTMLInputElement | null>;
   readonly addComposerAttachments: (files: File[]) => Promise<boolean>;
   readonly focusComposer: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <>
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={(event) => {
-          const files = Array.from(event.currentTarget.files ?? []);
-          event.currentTarget.value = "";
-          // Inserting a chip refocuses the editor after the draft renders;
-          // focusing synchronously here would report the editor's stale text
-          // over the prompt that was just written.
-          void addComposerAttachments(files).then((inserted) => {
-            if (!inserted) focusComposer();
-          });
-        }}
-      />
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onPointerDown={(event) => event.preventDefault()}
-              onClick={() => inputRef.current?.click()}
-              aria-label="Attach files"
-            />
-          }
-        >
-          {/* The clip's weight sits in its upper loop; 1px down reads as centered on the row. */}
-          <PaperclipIcon className="translate-y-px" />
-        </TooltipTrigger>
-        <TooltipPopup>Attach files</TooltipPopup>
-      </Tooltip>
-    </>
+    <input
+      ref={inputRef}
+      type="file"
+      multiple
+      className="hidden"
+      onChange={(event) => {
+        const files = Array.from(event.currentTarget.files ?? []);
+        event.currentTarget.value = "";
+        // Inserting a chip refocuses the editor after the draft renders;
+        // focusing synchronously here would report the editor's stale text
+        // over the prompt that was just written.
+        void addComposerAttachments(files).then((inserted) => {
+          if (!inserted) focusComposer();
+        });
+      }}
+    />
+  );
+}
+
+export function ComposerAttachButton({
+  inputRef,
+}: {
+  readonly inputRef: RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => inputRef.current?.click()}
+            aria-label="Attach files"
+          />
+        }
+      >
+        {/* The clip's weight sits in its upper loop; 1px down reads as centered on the row. */}
+        <PaperclipIcon className="translate-y-px" />
+      </TooltipTrigger>
+      <TooltipPopup>Attach files</TooltipPopup>
+    </Tooltip>
   );
 }
