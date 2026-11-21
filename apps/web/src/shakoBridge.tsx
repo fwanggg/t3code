@@ -126,9 +126,7 @@ function ShakoFirstVisit({
     return () => window.clearTimeout(timer);
   }, [environmentId, router, onDone]);
 
-  return pairedNow === null ? null : (
-    <ShakoFirstVisit environmentId={pairedNow} router={router} onDone={() => setPairedNow(null)} />
-  );
+  return null;
 }
 
 export function ShakoBridge({ router }: { readonly router: AppRouter }) {
