@@ -22,6 +22,7 @@ import { UseInAnotherAppDialogHost } from "../components/mcp/UseInAnotherAppDial
 import { AddProjectToMachineDialogHost } from "../components/AddProjectToMachineDialog";
 import { ConfirmDialogHost } from "../components/ConfirmDialogHost";
 import { DevReplayHost } from "../components/DevReplayHost";
+import { ShakoDevboxPanel } from "../components/sidebar/ShakoDevboxPanel";
 import { FirstRunGate } from "../components/onboarding/FirstRunGate";
 import { ConnectOnboardingDialog } from "../components/cloud/ConnectOnboardingDialog";
 import { RelayClientInstallDialog } from "../components/cloud/RelayClientInstallDialog";
@@ -59,6 +60,7 @@ import { readProject } from "../state/entities";
 
 import { getDesktopSnapShotBridge } from "../lib/desktopSnapShot";
 import { isChunkLoadError } from "../lib/chunkReloadGuard";
+import { inShakoFrame } from "../shakoDevbox";
 import { shouldResumeSnapShotSetupOnStartup } from "../lib/snapShotSetupResume";
 
 export const Route = createRootRoute({
@@ -214,6 +216,12 @@ function RootRouteBranch() {
       {isWelcome ? (
         <>
           {appHosts}
+          {inShakoFrame ? (
+            // The Shako workspace: the welcome page has no sidebar, so the devbox and its Disconnect sit on top.
+            <div className="fixed top-0 left-0 z-20 flex h-12 w-72 items-center border-r border-b border-border bg-background px-3">
+              <ShakoDevboxPanel />
+            </div>
+          ) : null}
           {appShell}
         </>
       ) : (
