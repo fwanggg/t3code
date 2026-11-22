@@ -568,11 +568,21 @@ export function installFakeEnvironment(
     /** Commands left unanswered even when accepting, until `rejectPendingCommand`. */
     readonly holdCommand?: (command: OrchestrationV2Command) => boolean;
     readonly providers?: ReadonlyArray<unknown>;
+    /** Advertises file uploads, which show the composer's attach button. */
+    readonly fileAttachments?: { readonly maxUploadBytes: number };
   },
 ): Disposable {
   threads = fixtures;
+  const config = makeServerConfig(options?.providers ?? [CODEX_PROVIDER]);
   baseServerConfig = {
-    ...makeServerConfig(options?.providers ?? [CODEX_PROVIDER]),
+    ...config,
+    environment: {
+      ...config.environment,
+      capabilities: {
+        ...config.environment.capabilities,
+        ...(options?.fileAttachments ? { fileAttachments: options.fileAttachments } : {}),
+      },
+    },
     keybindings: options?.keybindings ?? DEFAULT_RESOLVED_KEYBINDINGS,
   };
   dispatched = [];
