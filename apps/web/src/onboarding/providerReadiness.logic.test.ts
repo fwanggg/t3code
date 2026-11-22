@@ -8,7 +8,9 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   getOnboardingProviderState,
+  hasTerminalSignIn,
   resolveOnboardingProviderLoginCommand,
+  terminalSignInNextStep,
 } from "./providerReadiness.logic";
 
 const readyCodex: ServerProvider = {
@@ -90,7 +92,7 @@ describe("resolveOnboardingProviderLoginCommand", () => {
         },
         "linux",
       ),
-    ).toBe("/opt/codex-work/bin/codex login");
+    ).toBe("/opt/codex-work/bin/codex login --device-auth");
   });
 
   it("quotes a Codex path with spaces for PowerShell", () => {
@@ -110,7 +112,7 @@ describe("resolveOnboardingProviderLoginCommand", () => {
         },
         "windows",
       ),
-    ).toBe("& 'C:\\Program Files\\Codex & Tools\\codex.exe' login");
+    ).toBe("& 'C:\\Program Files\\Codex & Tools\\codex.exe' login --device-auth");
   });
 
   it("quotes a Claude path with shell metacharacters on POSIX", () => {
@@ -140,11 +142,11 @@ describe("resolveOnboardingProviderLoginCommand", () => {
   });
 
   it.each([
-    ["~/my tools/codex", "~/'my tools/codex' login"],
-    ["~\\my tools/codex", "~/'my tools/codex' login"],
-    ["~/tools/codex's build", `~/'tools/codex'"'"'s build' login`],
-    ["~\\tools\\codex's build", `~/'tools\\codex'"'"'s build' login`],
-    ["~/tools/codex; echo unsafe", "~/'tools/codex; echo unsafe' login"],
+    ["~/my tools/codex", "~/'my tools/codex' login --device-auth"],
+    ["~\\my tools/codex", "~/'my tools/codex' login --device-auth"],
+    ["~/tools/codex's build", `~/'tools/codex'"'"'s build' login --device-auth`],
+    ["~\\tools\\codex's build", `~/'tools\\codex'"'"'s build' login --device-auth`],
+    ["~/tools/codex; echo unsafe", "~/'tools/codex; echo unsafe' login --device-auth"],
   ])("keeps the home prefix expandable while quoting %s", (binaryPath, expectedCommand) => {
     expect(
       resolveOnboardingProviderLoginCommand(
@@ -182,6 +184,54 @@ describe("resolveOnboardingProviderLoginCommand", () => {
         },
         "unknown",
       ),
-    ).toBe("codex login");
+    ).toBe("codex login --device-auth");
+  });
+
+  it.each([
+    ["kiro", undefined, "kiro-cli login --use-device-flow"],
+    ["kiro", "/opt/kiro/kiro-cli", "/opt/kiro/kiro-cli login --use-device-flow"],
+    ["opencode", undefined, "opencode auth login"],
+    ["opencode", "/opt/Open Code/opencode", "'/opt/Open Code/opencode' auth login"],
+    ["pi", undefined, "pi"],
+    ["pi", "  ", "pi"],
+  ])("gives %s with binary path %s the command %s", (driver, binaryPath, expectedCommand) => {
+    const instanceId = ProviderInstanceId.make(driver);
+    expect(
+      resolveOnboardingProviderLoginCommand(
+        { ...readyCodex, instanceId, driver: ProviderDriverKind.make(driver) },
+        {
+          ...DEFAULT_SERVER_SETTINGS,
+          providerInstances: {
+            [instanceId]: {
+              driver: ProviderDriverKind.make(driver),
+              ...(binaryPath === undefined ? {} : { config: { binaryPath } }),
+            },
+          },
+        },
+        "linux",
+      ),
+    ).toBe(expectedCommand);
+  });
+});
+
+describe("hasTerminalSignIn", () => {
+  it("is true only for the agents with a sign-in command", () => {
+    expect(
+      ["claudeAgent", "codex", "kiro", "opencode", "pi", "cursor", "grok"].map(hasTerminalSignIn),
+    ).toEqual([true, true, true, true, true, false, false]);
+  });
+});
+
+describe("terminalSignInNextStep", () => {
+  it("tells Pi users to type /login, and adds nothing for a command that signs in alone", () => {
+    expect(terminalSignInNextStep("pi")).toBe(
+      "In Pi, type /login and sign in. Then press Ctrl+D to close Pi.",
+    );
+    expect(["kiro", "opencode", "claudeAgent", "codex"].map(terminalSignInNextStep)).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
   });
 });
