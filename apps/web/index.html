@@ -252,7 +252,8 @@
             storedTheme === "dark" ||
             storedTheme === "system" ||
             themeModes !== null;
-          const theme = isKnownTheme && storedTheme ? storedTheme : "system";
+          // Shako build: with no saved theme, T3 is dark (src/hooks/useTheme.ts has the same default).
+          const theme = isKnownTheme && storedTheme ? storedTheme : "dark";
           const isThemed = isKnownTheme && themeModes !== null;
           const baseAppearance = customTheme ? customTheme.appearance : "light";
           const systemMode = prefersDark ? "dark" : "light";
