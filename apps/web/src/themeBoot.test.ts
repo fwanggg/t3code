@@ -112,7 +112,8 @@ function runtimeResolvedAppearance(
   invalidateCustomThemes();
   try {
     const raw = storage[THEME_STORAGE_KEY] ?? null;
-    const theme = raw !== null && isKnownThemePreference(raw) ? raw : "system";
+    // Shako build: with no saved theme, T3 is dark (useTheme.ts).
+    const theme = raw !== null && isKnownThemePreference(raw) ? raw : "dark";
     const followRaw = storage[THEME_FOLLOW_SYSTEM_STORAGE_KEY] ?? null;
     const appearanceRaw = storage[THEME_APPEARANCE_MODE_STORAGE_KEY] ?? null;
     const appearanceMode =
@@ -154,6 +155,7 @@ describe("index.html boot script", () => {
     prefersDark: boolean;
   }> = [
     { name: "no stored preference on a dark OS", storage: {}, prefersDark: true },
+    { name: "no stored preference on a light OS", storage: {}, prefersDark: false },
     {
       name: "T3 Chat follows a dark OS",
       storage: { [THEME_STORAGE_KEY]: "t3-chat", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
@@ -254,6 +256,14 @@ describe("index.html boot script", () => {
   it.each(parityCases)("matches the runtime appearance: $name", ({ storage, prefersDark }) => {
     const boot = runBootScript({ storage, prefersDark });
     expect(boot.isDark).toBe(runtimeResolvedAppearance(storage, prefersDark) === "dark");
+  });
+
+  it("is dark with no saved theme, also on a light OS, and keeps a saved light theme (Shako build)", () => {
+    expect(runBootScript({ storage: {}, prefersDark: false }).isDark).toBe(true);
+    expect(runtimeResolvedAppearance({}, false)).toBe("dark");
+    expect(
+      runBootScript({ storage: { [THEME_STORAGE_KEY]: "light" }, prefersDark: true }).isDark,
+    ).toBe(false);
   });
 
   it("accepts exponent-form OKLCH before the runtime mounts", () => {

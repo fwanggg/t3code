@@ -40,12 +40,14 @@ type DesktopThemeBridge = Pick<DesktopBridge, "setTheme">;
 
 const STORAGE_KEY = "t3code:theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
+// Shako build: with no saved theme, T3 is dark (the Shako workspace around it is dark). A theme that the user picks
+// in Settings is saved and wins.
 const DEFAULT_THEME_SNAPSHOT: ThemeSnapshot = {
-  theme: "system",
-  resolvedTheme: "light",
+  theme: "dark",
+  resolvedTheme: "dark",
   systemDark: false,
-  followSystem: true,
-  appearanceMode: "system",
+  followSystem: false,
+  appearanceMode: "dark",
   themeHalves: null,
 };
 
