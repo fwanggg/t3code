@@ -64,6 +64,31 @@ export function resolveOnboardingProviderInstallCommand(
   return platform === "windows" ? commands.windows : commands.posix;
 }
 
+/**
+ * The agents (other than Claude and Codex) that sign in with a command in a terminal: the program,
+ * its arguments, and the step after the command when the command alone does not sign in. Pi has no
+ * login command: /login in Pi signs in, and the command ends only when Pi ends.
+ */
+const TERMINAL_SIGN_IN = {
+  kiro: { binary: "kiro-cli", args: "login --use-device-flow", nextStep: null },
+  opencode: { binary: "opencode", args: "auth login", nextStep: null },
+  pi: {
+    binary: "pi",
+    args: "",
+    nextStep: "In Pi, type /login and sign in. Then press Ctrl+D to close Pi.",
+  },
+} as const;
+
+/** What to do in the terminal after the sign-in command starts, or null when the command is all. */
+export function terminalSignInNextStep(driver: string): string | null {
+  return TERMINAL_SIGN_IN[driver as keyof typeof TERMINAL_SIGN_IN]?.nextStep ?? null;
+}
+
+/** True when the welcome page can sign in this agent with a command in a terminal. */
+export function hasTerminalSignIn(driver: string): boolean {
+  return driver === "claudeAgent" || driver === "codex" || driver in TERMINAL_SIGN_IN;
+}
+
 export function resolveOnboardingProviderLoginCommand(
   provider: ServerProvider,
   settings: ServerSettings,
@@ -77,10 +102,23 @@ export function resolveOnboardingProviderLoginCommand(
     return `${quoteProviderBinary(binaryPath, "claude", platform)} auth login`;
   }
 
+  // Shako build: T3 runs in a VM and the browser is on another computer. A login that waits for the
+  // browser on localhost in the VM cannot finish, so each command uses the sign-in that shows a link
+  // and a code (or asks for a pasted code).
   if (provider.driver === "codex") {
     const config = decodeCodexSettings(instance?.config ?? {});
     const binaryPath = Option.isSome(config) ? config.value.binaryPath : "codex";
-    return `${quoteProviderBinary(binaryPath, "codex", platform)} login`;
+    return `${quoteProviderBinary(binaryPath, "codex", platform)} login --device-auth`;
+  }
+
+  const terminal = TERMINAL_SIGN_IN[provider.driver as keyof typeof TERMINAL_SIGN_IN];
+  if (terminal !== undefined) {
+    const configured = (instance?.config as { readonly binaryPath?: unknown } | undefined)
+      ?.binaryPath;
+    const binaryPath =
+      typeof configured === "string" && configured.trim() ? configured : terminal.binary;
+    const command = quoteProviderBinary(binaryPath, terminal.binary, platform);
+    return terminal.args ? `${command} ${terminal.args}` : command;
   }
 
   return provider.driver;

@@ -62,7 +62,9 @@ import {
   splitOnboardingProjectPath,
 } from "../../onboarding/projectImport.logic";
 import {
+  hasTerminalSignIn,
   resolveOnboardingProviderInstallCommand,
+  terminalSignInNextStep,
   resolveOnboardingProviderLoginCommand,
 } from "../../onboarding/providerReadiness.logic";
 import {
@@ -376,7 +378,7 @@ const isInstallableDriver = (driver: string): driver is OnboardingAgentDriver =>
 
 interface AgentTerminalSession {
   readonly environmentId: EnvironmentId;
-  readonly driver: OnboardingAgentDriver;
+  readonly driver: ServerProvider["driver"];
   readonly providerInstanceId: ServerProvider["instanceId"];
   readonly cwd: string;
   readonly command: string;
@@ -442,10 +444,12 @@ function AgentsSection({
   const stateOf = (provider: ServerProvider) => welcomeAgentState(provider, serverConfig?.settings);
   const needsInstallOrSignIn = (provider: ServerProvider) => {
     const state = stateOf(provider);
+    // Shako build: an agent that is installed but not signed in gets the sign-in terminal when it has
+    // a sign-in command (Kiro, OpenCode and Pi too), not only Claude and Codex.
     return (
-      isInstallableDriver(provider.driver) &&
       !isBrokenVersion(provider) &&
-      (state === "install" || state === "signIn")
+      ((state === "install" && isInstallableDriver(provider.driver)) ||
+        (state === "signIn" && hasTerminalSignIn(provider.driver)))
     );
   };
   // Codex's card also offers ChatGPT sign-in, which still works when the CLI check failed.
@@ -467,27 +471,23 @@ function AgentsSection({
   if (listedCodex !== undefined && codexSetupProvider === null) setCodexSetupId(null);
 
   const openTerminal = (provider: ServerProvider) => {
-    if (
-      !isInstallableDriver(provider.driver) ||
-      serverConfig === null ||
-      !readEnvironmentScope(environmentId, AuthTerminalOperateScope)
-    )
+    if (serverConfig === null || !readEnvironmentScope(environmentId, AuthTerminalOperateScope))
       return;
+    const platform = serverConfig.environment.platform.os;
+    let command: string;
+    if (provider.installed && hasTerminalSignIn(provider.driver)) {
+      command = resolveOnboardingProviderLoginCommand(provider, serverConfig.settings, platform);
+    } else if (!provider.installed && isInstallableDriver(provider.driver)) {
+      command = resolveOnboardingProviderInstallCommand(provider.driver, platform);
+    } else {
+      return;
+    }
     setTerminalSession({
       environmentId,
       driver: provider.driver,
       providerInstanceId: provider.instanceId,
       cwd: serverConfig.cwd,
-      command: provider.installed
-        ? resolveOnboardingProviderLoginCommand(
-            provider,
-            serverConfig.settings,
-            serverConfig.environment.platform.os,
-          )
-        : resolveOnboardingProviderInstallCommand(
-            provider.driver,
-            serverConfig.environment.platform.os,
-          ),
+      command,
       keybindings: serverConfig.keybindings,
     });
   };
@@ -1216,6 +1216,7 @@ function AgentInstallTerminal({
   readonly onClose: () => void;
 }) {
   const { command, cwd, driver, environmentId, keybindings, providerInstanceId } = session;
+  const nextStep = terminalSignInNextStep(driver);
   const canOperateTerminal = useEnvironmentScope(environmentId, AuthTerminalOperateScope);
   const [advancedTypography] = useLocalStorage(
     TYPOGRAPHY_ADVANCED_STORAGE_KEY,
@@ -1337,7 +1338,7 @@ function AgentInstallTerminal({
               terminal.
             </>
           ) : setupState === "ready" ? (
-            "Review the command, then press Enter to run it."
+            `Review the command, then press Enter to run it.${nextStep ? ` ${nextStep}` : ""}`
           ) : setupState === "openFailed" ? (
             "Could not open the setup terminal."
           ) : (
