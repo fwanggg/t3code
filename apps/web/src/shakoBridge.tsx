@@ -1,10 +1,16 @@
+import { useAtomValue } from "@effect/atom-react";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
-import { useEffect, useEffectEvent } from "react";
+import type { EnvironmentId } from "@t3tools/contracts";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { environmentCatalog } from "./connection/catalog";
 import { connectPairing } from "./connection/onboarding";
 import { setShakoDevbox, type ShakoDevbox } from "./shakoDevbox";
+import type { AppRouter } from "./router";
 import { useEnvironments } from "./state/environments";
+import { environmentProjects } from "./state/projects";
+import { environmentShell } from "./state/shell";
+import { environmentThreadShells } from "./state/threads";
 import { useAtomCommand } from "./state/use-atom-command";
 
 // The bridge to the Shako workspace (github.com/fwanggg/shako, shako/docs/build.md), which shows this app in a frame
@@ -52,8 +58,70 @@ function postToWorkspace(message: object) {
   window.parent.postMessage(message, window.location.origin);
 }
 
-export function ShakoBridge() {
+// The hosted build has no primary computer, so T3 never opens its welcome page by itself
+// (resolveHostedFirstRunDecision). The bridge opens it for a devbox with no project and no thread: after a pairing,
+// and at a page load on T3's main page.
+const FAILED_PHASES: ReadonlySet<string> = new Set(["error", "blocked", "unsupported"]);
+
+interface FirstVisit {
+  readonly environmentId: EnvironmentId;
+  /** True after a pairing: open the welcome page from any route. False at a page load: only from the main page. */
+  readonly fromPairing: boolean;
+}
+
+/** Wait for the threads and projects of the devbox (its shell is live), then decide once. */
+function ShakoFirstVisit({
+  visit,
+  router,
+  onDone,
+}: {
+  readonly visit: FirstVisit;
+  readonly router: AppRouter;
+  readonly onDone: () => void;
+}) {
+  const { environmentId, fromPairing } = visit;
+  const live = useAtomValue(environmentShell.stateValueAtom(environmentId)).status === "live";
+  const { environments } = useEnvironments();
+  const phase = environments.find((e) => e.environmentId === environmentId)?.connection.phase;
+  const projects = useAtomValue(environmentProjects.projectsAtom);
+  const threads = useAtomValue(environmentThreadShells.threadShellsAtom);
+  const fresh =
+    !projects.some((project) => project.environmentId === environmentId) &&
+    !threads.some((thread) => thread.environmentId === environmentId);
+  const decided = useRef(false);
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens the welcome page once the devbox sent its threads and projects
+  useEffect(() => {
+    if (decided.current) return;
+    if (phase !== undefined && FAILED_PHASES.has(phase)) {
+      decided.current = true;
+      console.warn(
+        `shako: ${environmentId} cannot connect (${phase}); T3 shows the connection state`,
+      );
+      onDone();
+      return;
+    }
+    if (!live) return;
+    decided.current = true;
+    const onMainPage = router.state.location.pathname === "/";
+    if (fresh && (fromPairing || onMainPage)) {
+      void router.navigate({ to: "/welcome", hash: `agents:${environmentId}`, replace: true });
+    }
+    onDone();
+  }, [live, phase, fresh, fromPairing, environmentId, router, onDone]);
+
+  return null;
+}
+
+export function ShakoBridge({ router }: { readonly router: AppRouter }) {
   const { isReady, environments } = useEnvironments();
+  const [visit, setVisit] = useState<FirstVisit | null>(null);
+  // The page-load check runs once: after it, or after a pairing, only a new pairing opens the welcome page.
+  const [loadChecked, setLoadChecked] = useState(false);
+  const endVisit = () => {
+    setVisit(null);
+    setLoadChecked(true);
+  };
   const pair = useAtomCommand(connectPairing, { reportFailure: false });
   const remove = useAtomCommand(environmentCatalog.remove, { reportFailure: false });
   const inFrame = window.parent !== window;
@@ -87,6 +155,11 @@ export function ShakoBridge() {
     }
     if (!isPairMessage(event.data)) return;
     const result = await pair({ host: event.data.host, pairingCode: event.data.credential });
+    if (result._tag === "Success") {
+      // T3's main page at once: never a thread or a page of the devbox before. Then the welcome page, if new.
+      void router.navigate({ to: "/", replace: true });
+      setVisit({ environmentId: result.value, fromPairing: true });
+    }
     postToWorkspace({
       type: "shako:paired",
       host: event.data.host,
@@ -108,5 +181,20 @@ export function ShakoBridge() {
       postToWorkspace({ type: "shako:environments", environments: JSON.parse(reportKey) });
   }, [inFrame, isReady, reportKey]);
 
-  return null;
+  // At a page load, a connected devbox with no project and no thread gets the welcome page.
+  const [only] = environments;
+  const loadVisit: FirstVisit | null =
+    inFrame && isReady && !loadChecked && environments.length === 1 && only
+      ? { environmentId: only.environmentId, fromPairing: false }
+      : null;
+  const current = visit ?? loadVisit;
+
+  return current === null ? null : (
+    <ShakoFirstVisit
+      key={`${current.environmentId}:${current.fromPairing}`}
+      visit={current}
+      router={router}
+      onDone={endVisit}
+    />
+  );
 }

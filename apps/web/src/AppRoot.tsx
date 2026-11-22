@@ -15,7 +15,7 @@ export function AppRoot({ router }: { readonly router: AppRouter }) {
         <RouterProvider router={router} />
         <ElectronBrowserHost />
         <QuitHoldOverlay />
-        <ShakoBridge />
+        <ShakoBridge router={router} />
       </AppAtomRegistryProvider>
     </I18nProvider>
   );
