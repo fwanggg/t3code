@@ -6,7 +6,6 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Tracer from "effect/Tracer";
 import type { HttpClient } from "effect/http";
-import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
 export interface RelayClientTracingConfig {
   readonly tracesUrl: string;
@@ -139,36 +138,16 @@ export function nonInterferingTracer(delegate: Tracer.Tracer): Tracer.Tracer {
   });
 }
 
+/**
+ * Shako build: relay spans stay local. Upstream exports them over OTLP to Axiom with a token that
+ * its release builds embed; the spans carry connection timings, environment ids, the machine's
+ * name and error stacks. Here no config turns the export on, so `withRelayClientTracing` always
+ * uses the local tracer.
+ */
 export function layer(
-  config: RelayClientTracingConfig | null,
-  resource: RelayClientTracingResource,
+  _config: RelayClientTracingConfig | null,
+  _resource: RelayClientTracingResource,
+  _options?: { readonly isEnabled?: () => boolean },
 ): Layer.Layer<never, never, HttpClient.HttpClient> {
-  if (config === null) {
-    return Layer.succeed(RelayClientTracer, Option.none());
-  }
-
-  const layerTracer = OtlpTracer.layer({
-    url: config.tracesUrl,
-    headers: {
-      Authorization: `Bearer ${config.tracesToken}`,
-      "X-Axiom-Dataset": config.tracesDataset,
-    },
-    resource: {
-      serviceName: resource.serviceName,
-      serviceVersion: resource.serviceVersion,
-      attributes: {
-        "service.namespace": "t3code",
-        "service.instance.id": resource.serviceInstanceId,
-        "service.runtime": resource.runtime,
-        "t3code.component": resource.component ?? "relay-client",
-        "t3code.client.surface": resource.client,
-        ...resource.attributes,
-      },
-    },
-  }).pipe(Layer.provide(OtlpSerialization.layerJson));
-
-  return Layer.effect(
-    RelayClientTracer,
-    Tracer.Tracer.pipe(Effect.map(nonInterferingTracer), Effect.asSome),
-  ).pipe(Layer.provide(layerTracer));
+  return Layer.succeed(RelayClientTracer, Option.none());
 }

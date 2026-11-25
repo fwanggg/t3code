@@ -53,6 +53,7 @@ export function ShakoDevboxPanel() {
               <button
                 type="button"
                 onClick={askShakoToDisconnect}
+                // oxlint-disable-next-line t3code/no-untranslated-copy -- Shako build: English only, so a rebase does not touch the catalogs
                 aria-label={`Disconnect ${devbox.name}`}
                 className="ml-auto flex size-5 shrink-0 items-center justify-center text-error hover:bg-error-surface"
               />
@@ -60,11 +61,13 @@ export function ShakoDevboxPanel() {
           >
             <XIcon className="size-3.5" />
           </TooltipTrigger>
+          {/* oxlint-disable-next-line t3code/no-untranslated-copy -- Shako build: English only, so a rebase does not touch the catalogs */}
           <TooltipPopup side="bottom">Disconnect</TooltipPopup>
         </Tooltip>
       </div>
       <div className="flex min-w-0 items-center gap-3">
         <Use label="RAM" use={devbox.ram} />
+        {/* oxlint-disable-next-line t3code/no-untranslated-copy -- Shako build: English only, so a rebase does not touch the catalogs */}
         <Use label="Disk" use={devbox.disk} />
       </div>
     </div>
