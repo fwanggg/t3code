@@ -1,5 +1,16 @@
 # Product usage data
 
+> **Shako build.** This build sends no product usage events and no relay connection traces:
+>
+> - The server's analytics service does nothing. It makes no request to `ingest.t3.codes`, and it
+>   does not read `~/.codex/auth.json`, `~/.claude.json` or the linked T3 Connect account.
+> - The web app does not send a hash of the T3 Connect account or of a device id to the server.
+> - Relay spans stay in the local trace file. Nothing goes to Axiom.
+>
+> `T3CODE_TELEMETRY_ENABLED` and the managed policy have nothing to turn off. Diagnostics export to
+> your own OpenTelemetry receiver (below) still works, and only when you configure it. The rest
+> of this page describes upstream T3 Code.
+
 The T3 Code server sends product usage events to T3 Code's own endpoint at `ingest.t3.codes`,
 associated with a hashed account or installation identifier. To count how many installations one person
 uses, the server also sends hashed account identifiers: your T3 Connect account, your OpenAI and

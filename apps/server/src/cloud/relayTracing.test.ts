@@ -30,9 +30,10 @@ const tracesTo = (policy?: ManagedPolicyDocument) =>
     Effect.map(Option.isSome),
   );
 
-it.effect("a policy with telemetry off stops relay tracing to T3 Connect", () =>
+// Shako build: relay spans stay local even with a full tracing config and no policy.
+it.effect("relay tracing exports nothing, with or without a policy", () =>
   Effect.gen(function* () {
-    assert.isTrue(yield* tracesTo());
+    assert.isFalse(yield* tracesTo());
     assert.isFalse(
       yield* tracesTo({
         schemaVersion: 1,

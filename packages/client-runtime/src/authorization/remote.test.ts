@@ -314,7 +314,7 @@ describe("remote environment authorization", () => {
     }),
   );
 
-  it.effect("names the signed-in Connect account and this device by hash only", () =>
+  it.effect("Shako build: names neither the signed-in Connect account nor this device", () =>
     Effect.gen(function* () {
       const fetch = recordedFetch(
         Response.json({ ticket: "ws-ticket", expiresAt: "2026-05-01T12:05:00.000Z" }),
@@ -340,8 +340,10 @@ describe("remote environment authorization", () => {
         ),
       );
 
-      expect(url.searchParams.get("clientOwner")).toBe(hashTelemetryId("user_connect"));
-      expect(url.searchParams.get("clientDevice")).toBe(hashTelemetryId("device-1"));
+      expect(url.searchParams.get("clientOwner")).toBeNull();
+      expect(url.searchParams.get("clientDevice")).toBeNull();
+      expect(url.toString()).not.toContain(hashTelemetryId("user_connect"));
+      expect(url.toString()).not.toContain(hashTelemetryId("device-1"));
       expect(url.toString()).not.toContain("user_connect");
       expect(url.toString()).not.toContain("device-1");
     }),
