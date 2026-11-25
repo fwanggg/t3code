@@ -54,6 +54,7 @@ export function AboutVersionTitle() {
         target="_blank"
         rel="noreferrer"
       >
+        {/* oxlint-disable-next-line t3code/no-untranslated-copy -- Shako build: English only, so a rebase does not touch the catalogs */}
         Built on T3 Code (MIT)
       </a>
     </span>
